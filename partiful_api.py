@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 from zoneinfo import ZoneInfo
 
 partiful_event_prefix = "https://partiful.com/e/"
