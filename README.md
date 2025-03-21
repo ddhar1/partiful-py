@@ -1,7 +1,19 @@
 # Partiful API Client
 
 A Python client for interacting with the Partiful API.
-Cursor helped me translate the code from this repo to get me started, https://github.com/cerebralvalley/partiful-api, thank you [cerebralvalley]( https://github.com/cerebralvalley)
+Cursor helped me translate the code from this repo to get me started, https://github.com/cerebralvalley/partiful-api, thank you [cerebralvalley]( https://github.com/cerebralvalley).
+
+## Getting the Auth and user_id values
+
+Partiful doesn't have an official API. You need a partiful account and then need to figure out your user_id, and find a currently active auth token
+1. Login to the Partiful website
+2. Open the developer tools -> network
+3. Refresh the page or click on an event
+4. Look for a network request that uses the Authentication Bearer token (such as getMutuals).
+5. Navigate to the request's headers tab
+6. Copy the Authorization header's value (without the Bearer part) + user_id
+
+Note: this token expires after a while, so you'll need to repeat this process about at least once a day. Mainly using this when I have to make 5 events in a row.
 
 ## Installation
 You need python >=3.9
@@ -16,7 +28,7 @@ pip install -r requirements.txt
 ## Usage
 
 ```python
-from src.partiful_api import PartifulApi
+from partiful_api import PartifulApi
 
 # Initialize the client with your auth token
 api = PartifulApi(auth_token='your_auth_token', user_id='your_user_id')
@@ -37,10 +49,6 @@ event = api.create_event(
 )
 
 ```
-
-## Features
-
-
 
 ## Dependencies
 
