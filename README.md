@@ -1,19 +1,7 @@
 # Partiful API Client
 
-A Python client for interacting with the Partiful API.
+A Python client for automatically getting access to partiful API (through your partiful acct creds) + interacting with the Partiful API.
 Cursor helped me translate the code from this repo to get me started, https://github.com/cerebralvalley/partiful-api, thank you [cerebralvalley]( https://github.com/cerebralvalley).
-
-## Getting the Auth and user_id values
-
-Partiful doesn't have an official API. You need a partiful account and then need to figure out your user_id, and find a currently active auth token
-1. Login to the Partiful website
-2. Open the developer tools -> network
-3. Refresh the page or click on an event
-4. Look for a network request that uses the Authentication Bearer token (such as getMutuals).
-5. Navigate to the request's headers tab
-6. Copy the Authorization header's value (without the Bearer part) + user_id
-
-Note: this token expires after a while, so you'll need to repeat this process about at least once a day. Mainly using this when I have to make 5 events in a row.
 
 ## Installation
 You need python >=3.9
@@ -50,9 +38,16 @@ event = api.create_event(
 
 ```
 
-## Dependencies
 
-- requests
-- beautifulsoup4
-- urllib3
+## Getting the Auth and user_id values manually
 
+`partiful_bot.py` can help you get your bearer token but you will (as of now), need to set a default_profile using `partiful_bot.partiful_profile` namedtuple. You can find your user id through your partiful profile (your profile page is at `https://partiful.com/u/USER_PROFILE_ID_HERE`) 
+
+### Getting the bearer token manually:
+Partiful doesn't have an official API. You need a partiful account and then need to figure out your user_id, and find a currently active auth token
+1. Login to the Partiful website
+2. Open the developer tools -> network
+3. Refresh the page or click on an event
+4. Look for a network request that uses the Authentication Bearer token (such as getMutuals).
+5. Navigate to the request's headers tab
+6. Copy the Authorization header's value (without the Bearer part) + user_id
