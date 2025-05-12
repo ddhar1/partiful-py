@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from PartifulBot import PartifulBot, partiful_profile
+from partiful_bot import PartifulBot, partiful_profile
 from selenium.common.exceptions import ElementClickInterceptedException
 
 @pytest.fixture
