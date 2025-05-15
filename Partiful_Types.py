@@ -76,9 +76,25 @@ class Data(BaseModel):
     params: Union[CreateEventParams, dict]
     userId: str
 
+
+
 class RequestBody(BaseModel):
     data: Data
 
+class GetMutualsParams(BaseModel):
+    shouldRemoveEventData: bool = False
+
+
+
+class Paging(BaseModel):
+    maxResults: int = 8
+    cursor: str = None
+
+
+class GetMutualsData(BaseModel):
+    params: GetMutualsParams
+    paging: Paging
+    userId: str
 # Example of creating an instance of the RequestBody with defaults
 # request_body = RequestBody(
 #     data=Data(
