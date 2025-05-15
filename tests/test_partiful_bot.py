@@ -1,18 +1,54 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from partiful_bot import PartifulBot, partiful_profile
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 
 @pytest.fixture
-def bot_fixture():
-    with patch('PartifulBot.Chrome') as mock_chrome:
-        test_profile = partiful_profile(name='main', user_id='numberhere')
-        mock_driver = MagicMock()
-        mock_chrome.return_value = mock_driver
-        bot = PartifulBot(phone_number="+1234567890", default_profile=test_profile)
+def fake_profile():
+    return partiful_profile(name='Test User', user_id='abc123')
+
+@pytest.fixture
+def bot_fixture(fake_profile):
+    """Fixture to create a PartifulBot instance."""
+    # Mock the ChromeDriverManager and Chrome
+    mock_driver = MagicMock()
+    mock_driver.current_url = "https://partiful.com/login"
+    mock_driver.quit = MagicMock()
+
+    with patch("partiful_bot.ChromeDriverManager.install", return_value=mock_driver), \
+         patch("partiful_bot.Chrome", return_value=mock_driver):
+        bot = PartifulBot(phone_number="5551234567", default_profile=fake_profile)
         yield bot, mock_driver
 
-@patch('PartifulBot.Client')
+@patch("partiful_bot.ChromeDriverManager.install")
+@patch("partiful_bot.Chrome")
+def test_bot_init(mock_install, mock_chrome, fake_profile):
+    # Setup mock return values
+    mock_chrome.return_value = "/path/to/fake/driver"
+    mock_install.return_value = MagicMock()
+
+    bot = PartifulBot(phone_number="5551234567", default_profile=fake_profile)
+
+    assert bot.phone_number == "5551234567"
+    assert bot.default_profile == fake_profile
+    assert bot._selenium_driver is mock_install.return_value
+    assert bot._logs == []
+
+# @patch("partiful_bot.ChromeDriverManager.install")
+# @patch("partiful_bot.Chrome")
+# def test_driver_alive_false(mock_chrome_install, mock_chrome, fake_profile):
+#     mock_driver = MagicMock()
+#     mock_driver.current_url.side_effect = TimeoutException("driver broken")
+#     mock_driver.quit = MagicMock()
+#     mock_chrome_install.return_value = mock_driver
+
+#     bot = PartifulBot(phone_number="5551234567", default_profile=fake_profile)
+#     bot._selenium_driver = mock_driver
+
+#     assert bot._is_driver_alive() is False
+#     mock_driver.quit.assert_called_once()
+
+@patch('partiful_bot.Client')
 def test_get_verification_code(mock_twilio_client, bot_fixture, monkeypatch):
     """Test the get_verification_code method."""
     monkeypatch.setenv("TWILIO_ACCOUNT_SID", "value")
@@ -29,12 +65,12 @@ def test_get_verification_code(mock_twilio_client, bot_fixture, monkeypatch):
         limit=1
     )
 
-@patch('PartifulBot.WebDriverWait')
-@patch('PartifulBot.random.uniform', return_value=5)
-@patch('PartifulBot.time.sleep', return_value=None)
-@patch('PartifulBot.PartifulBot.get_verification_code')
-@patch('PartifulBot.PartifulBot._store_logs')
-@patch('PartifulBot.PartifulBot.set_bearer_token')
+@patch('partiful_bot.WebDriverWait')
+@patch('partiful_bot.random.uniform', return_value=5)
+@patch('partiful_bot.time.sleep', return_value=None)
+@patch('partiful_bot.PartifulBot.get_verification_code')
+@patch('partiful_bot.PartifulBot._store_logs')
+@patch('partiful_bot.PartifulBot.set_bearer_token')
 def test_login_success(
     mock_set_bearer_token,
     mock_store_logs,
@@ -77,12 +113,12 @@ def test_login_success(
     mock_store_logs.assert_called_once()
     mock_set_bearer_token.assert_called_once()
 
-@patch('PartifulBot.WebDriverWait')
-@patch('PartifulBot.random.uniform', return_value=5)
-@patch('PartifulBot.time.sleep', return_value=None)
-@patch('PartifulBot.PartifulBot.get_verification_code')
-@patch('PartifulBot.PartifulBot._store_logs')
-@patch('PartifulBot.PartifulBot.set_bearer_token')
+@patch('partiful_bot.WebDriverWait')
+@patch('partiful_bot.random.uniform', return_value=5)
+@patch('partiful_bot.time.sleep', return_value=None)
+@patch('partiful_bot.PartifulBot.get_verification_code')
+@patch('partiful_bot.PartifulBot._store_logs')
+@patch('partiful_bot.PartifulBot.set_bearer_token')
 def test_login_no_bearer_token_raises(
     mock_set_bearer_token,
     mock_store_logs,
@@ -122,7 +158,7 @@ def test_setup_driver(bot_fixture):
     driver = bot._setup_driver()
     assert driver is not None
 
-@patch('PartifulBot.PartifulBot._setup_driver')
+@patch('partiful_bot.PartifulBot._setup_driver')
 def test_exit(mock_setup_driver):
     """Test the __exit__ method."""
     mock_driver = MagicMock()

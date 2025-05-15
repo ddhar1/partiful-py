@@ -1,7 +1,6 @@
 from collections import namedtuple
 import json
 from os import environ
-from partiful_api import PartifulAPI
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver import Chrome, ChromeOptions
@@ -39,7 +38,6 @@ class PartifulBot:
         self._service = Service(ChromeDriverManager().install())
         self._selenium_driver = self._setup_driver()
         self._logs = []
-        self.partiful_api = None
         
         
     def _setup_driver(self) -> Chrome:
@@ -55,6 +53,20 @@ class PartifulBot:
         #chrome_options.add_argument("--disable-dev-shm-usage")
         #chrome_options.add_argument("--disable-gpu")
         return Chrome(service=self._service, options=chrome_options)
+
+    def _is_driver_alive(self) -> bool:
+        """
+        Check if the Selenium driver is still active and functional.
+        If not, reinitialize it.
+        """
+        try:
+            self._selenium_driver.current_url
+            return True
+        except (TimeoutException, ElementClickInterceptedException) as e:
+            print(f"Selenium driver is not functional due to error: {e}. You can reinit with self._selenium_driver = self._setup_driver() & logging in again")
+            self._selenium_driver.quit()
+            return False
+        return False
 
     def login(self):
         """
@@ -161,14 +173,7 @@ class PartifulBot:
             time.sleep(5)  # Wait for the page to reload
         raise Exception("Bearer token not found in network logs after multiple attempts.")
 
-    def setup_partiful_api(self):
-        """Set up the Partiful API with the bearer token."""
-        if self._bearer_token is None:
-            # TODO: elegantly refresh page or relogin get bearer token
-            raise ValueError("Bearer token is not set. Please log in first.")
-        
-        self.partiful_api = PartifulAPI(auth_token=self.bearer_token, user_id=self.default_profile.user_id)
-        
+
 
     def __enter__(self):
         self._selenium_driver = self._setup_driver()
