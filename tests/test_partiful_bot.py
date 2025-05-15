@@ -2,6 +2,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 from partiful_bot import PartifulBot, partiful_profile
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
+import logging
+
+# Disable pytest logging to prevent log file creation during tests
+logging.getLogger().handlers.clear()
 
 @pytest.fixture
 def fake_profile():
@@ -32,7 +36,7 @@ def test_bot_init(mock_install, mock_chrome, fake_profile):
     assert bot.phone_number == "5551234567"
     assert bot.default_profile == fake_profile
     assert bot._selenium_driver is mock_install.return_value
-    assert bot._logs == []
+    assert bot._driver_logs == []
 
 # @patch("partiful_bot.ChromeDriverManager.install")
 # @patch("partiful_bot.Chrome")
@@ -69,7 +73,7 @@ def test_get_verification_code(mock_twilio_client, bot_fixture, monkeypatch):
 @patch('partiful_bot.random.uniform', return_value=5)
 @patch('partiful_bot.time.sleep', return_value=None)
 @patch('partiful_bot.PartifulBot.get_verification_code')
-@patch('partiful_bot.PartifulBot._store_logs')
+@patch('partiful_bot.PartifulBot._store_driver_logs')
 @patch('partiful_bot.PartifulBot.set_bearer_token')
 def test_login_success(
     mock_set_bearer_token,
@@ -117,7 +121,7 @@ def test_login_success(
 @patch('partiful_bot.random.uniform', return_value=5)
 @patch('partiful_bot.time.sleep', return_value=None)
 @patch('partiful_bot.PartifulBot.get_verification_code')
-@patch('partiful_bot.PartifulBot._store_logs')
+@patch('partiful_bot.PartifulBot._store_driver_logs')
 @patch('partiful_bot.PartifulBot.set_bearer_token')
 def test_login_no_bearer_token_raises(
     mock_set_bearer_token,
