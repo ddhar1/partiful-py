@@ -1,7 +1,10 @@
 # Partiful API Client
 
-A Python client for automatically getting access to partiful API (through your partiful acct creds) + interacting with the Partiful API.
+A Python client for automatically getting partiful auth cres +  interacting with the partiful API
 Cursor helped me translate the code from this repo to get me started, https://github.com/cerebralvalley/partiful-api, thank you [cerebralvalley]( https://github.com/cerebralvalley).
+
+`partiful_bot`: helps you get an auth token automatically
+`partiful_api`: helps you interact with the auth token and request data from the API
 
 ## Installation
 You need python >=3.9
