@@ -1,4 +1,5 @@
 from collections import namedtuple
+from datetime import datetime
 import json
 from os import environ
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
@@ -8,10 +9,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+import logging
+from logging_config import setup_logging
+setup_logging()
 
 import time
 from twilio.rest import Client
 import random
+
 
 TWILIO_ACCOUNT_SID = environ['TWILIO_ACCOUNT_SID']
 TWILIO_AUTH_TOKEN = environ['TWILIO_AUTH_TOKEN']
@@ -37,7 +42,8 @@ class PartifulBot:
 
         self._service = Service(ChromeDriverManager().install())
         self._selenium_driver = self._setup_driver()
-        self._logs = []
+        logging.info("Selenium driver initialized.")
+        self._driver_logs = []
         
         
     def _setup_driver(self) -> Chrome:
@@ -63,7 +69,8 @@ class PartifulBot:
             self._selenium_driver.current_url
             return True
         except (TimeoutException, ElementClickInterceptedException) as e:
-            print(f"Selenium driver is not functional due to error: {e}. You can reinit with self._selenium_driver = self._setup_driver() & logging in again")
+            self._save_driver_screenshot()
+            logging.error(f"Selenium driver is not functional due to error: {e}. You can reinit with self._selenium_driver = self._setup_driver() & logging in again")
             self._selenium_driver.quit()
             return False
         return False
@@ -76,23 +83,32 @@ class PartifulBot:
         self._selenium_driver.get('https://partiful.com/login') # 
         
         # Wait for phone input field, enter phone num,  and submit
-        print("Inputting phone number...")
+        logging.info("Inputting phone number...")
         time.sleep(5) # wait for page to load
-        phone_input = WebDriverWait(self._selenium_driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//input[@type='tel']")) #[@name='phoneNumber']
-        )
+        try:
+            phone_input = WebDriverWait(self._selenium_driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@type='tel']")) #[@name='phoneNumber']
+            )
+        except Exception as e:
+            self._save_driver_screenshot()  # Save a screenshot for debugging
+            raise e("Phone number input field not found. Please check the login process.")
         phone_input.send_keys(self.phone_number)
         time.sleep(random.uniform(4, 12)) # wait for page to load
         submit_button = self._selenium_driver.find_element(By.XPATH, "//button[@type='submit']")
         submit_button.click()
 
         # Get verification code, and submit it
-        print("Waiting for verification code...")
+        logging.info("Waiting for verification code...")
         time.sleep(5)
         verification_code = self.get_verification_code()
-        verification_input = WebDriverWait(self._selenium_driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//input[@name='authCode']"))
-        )
+        try:
+            verification_input = WebDriverWait(self._selenium_driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@name='authCode']"))
+            )
+        except Exception as e:
+            self._save_driver_screenshot()
+            raise e("Verification code input field not found. Please check the login process.")
+        
         verification_input.send_keys(verification_code)
         time.sleep(random.uniform(4, 12)) # wait for page to load
         submit_verification_button = self._selenium_driver.find_element(By.XPATH, "//button[@type='submit']")
@@ -102,13 +118,13 @@ class PartifulBot:
         try:
             WebDriverWait(self._selenium_driver, 20).until(EC.element_to_be_clickable((By.XPATH, "//button[@type='submit']"))).click()
         except ElementClickInterceptedException as e:
-            self._selenium_driver.save_screenshot("error_screenshot.png")  # Save a screenshot for debugging
+            self._save_driver_screenshot()  # Save a screenshot for debugging
             raise e("Login button was not clickable, cannot proceed")
             
-        print("Waiting for login to complete...")
+        logging.info("Waiting for login to complete...")
         time.sleep(10) # wait for page to load
-
-        self._store_logs() # store logs for debugging
+        self._save_driver_screenshot()
+        self._store_driver_logs() # store logs for debugging
         self.set_bearer_token() # set bearer token using network logs
         # TODO: can elegantly set default user_id 
         if self._bearer_token is None:
@@ -127,25 +143,25 @@ class PartifulBot:
         verification_code = messages[0].body.split(" ")[0]
         return verification_code
     
-    def _store_logs(self):
+    def _store_driver_logs(self):
         """
         Store the logs in a file for debugging purposes.
         """
         log_entries = self._selenium_driver.get_log("performance")
-        self._logs = []
+        self._driver_logs = []
         for entry in log_entries:
             try:
-                self._logs.append(json.loads(entry["message"])["message"])
+                self._driver_logs.append(json.loads(entry["message"])["message"])
             except json.JSONDecodeError:
                 continue  # Skip entries that fail to load
             except Exception as e: # unsure about other exceptions
-                print(f"Error processing log entry: {e}")
+                logging.info(f"Error processing log entry: {e}")
                 continue
         # Filter out logs that are not relevant
         
         # Save logs to a file for debugging
-        with open("network_logs.json", "w") as log_file:
-            json.dump(self._logs, log_file, indent=4)
+        with open(f"logs/driver_logs/{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as log_file:
+            json.dump(self._driver_logs, log_file, indent=4)
 
     def set_bearer_token(self):
         """
@@ -155,7 +171,7 @@ class PartifulBot:
         # get api.partiful.com bearer token through network logs
         attempts = 3  # Number of attempts to refresh logs
         for _ in range(attempts):
-            for message in self._logs:
+            for message in self._driver_logs:
                 try:
                     method = message.get("method")
                     if method in ['Network.requestWillBeSentExtraInfo', 'Network.requestWillBeSent']:
@@ -173,7 +189,9 @@ class PartifulBot:
             time.sleep(5)  # Wait for the page to reload
         raise Exception("Bearer token not found in network logs after multiple attempts.")
 
-
+    def _save_driver_screenshot(self):
+        screenshot_name = f"logs/screenshots/{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        self._selenium_driver.save_screenshot(screenshot_name)  # Save a screenshot for debugging
 
     def __enter__(self):
         self._selenium_driver = self._setup_driver()
