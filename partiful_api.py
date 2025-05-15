@@ -1,11 +1,17 @@
 import requests
 from datetime import datetime
+import logging
 from typing import List, Dict, Any
 from partiful_bot import PartifulBot, partiful_profile
-from Partiful_Types import CreateEventParams, Event, Data, RequestBody
+import Partiful_Types 
+from Partiful_Types import Event, RequestBody, Data
 from zoneinfo import ZoneInfo
 from requests.exceptions import JSONDecodeError
 import json
+from pydantic import BaseModel
+from logging_config import setup_logging
+
+setup_logging()
 
 EVENT_PREFIX_URL = "https://partiful.com/e/"
 PARTIFUL_API_URL = "https://api.partiful.com/"
@@ -27,6 +33,8 @@ class PartifulAPI:
                 'Authorization': f'Bearer {self.auth_token}',
                 'Referer': 'https://partiful.com/',
                 'Origin': 'https://partiful.com',
+                'Accept': '*/*',
+                'Accept-Encoding': 'gzip, deflate, br, zstd',
                 'Accept-Language': 'en-US,en;q=0.5',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0'
             }
@@ -86,16 +94,16 @@ class PartifulAPI:
                         description=description
                     )
         
-        request_body = RequestBody(
+        request_model = RequestBody(
                         data=Data(
-                                params=CreateEventParams(event=event,
+                                params=Partiful_Types.CreateEventParams(event=event,
                                     saveAsDraft=False,
                                     cohostIds=cohosts
                                     ),
                                 userId=self.user_id
                             )
                         )
-        response_json = self.call_api(url, method='POST', data=request_body.model_dump_json())
+        response_json = self.call_api(url, method='POST', model=request_model)
 
 
         try:
@@ -114,13 +122,15 @@ class PartifulAPI:
         
         request_body = json.dumps({
             'data': {
-                'params': {},
-                'paging': {'cursor': None, 'maxResults': 100},
+                'params': {'shouldRemoveEventData': True},
+                'paging': {'cursor': None, 'maxResults': 8},
                 "userId": self.user_id
             }
             })
+        
+        request_model = RequestBody(data=Data(params=Partiful_Types.GetMutualsParams(), paging=Partiful_Types.Paging(), userId=self.user_id))
 
-        response_json = self.call_api(url, method='POST', data=request_body)
+        response_json = self.call_api(url, method='POST', model=request_model)
 
         return response_json
 
@@ -130,19 +140,22 @@ class PartifulAPI:
         """
         url = PARTIFUL_API_URL + "getMyRsvps"    
 
-        response = self.call_api(url, method='POST', data=RequestBody(data=Data(params={}, userId=self.user_id)).model_dump_json())
+        request_model = RequestBody(data=Data(params={}, userId=self.user_id))
+
+        response = self.call_api(url, method='POST', model=request_model)
 
         return response
 
-    def call_api(self, url: str, method: str = 'GET', data: Dict[str, Any] = None) -> Any:
+    def call_api(self, url: str, method: str = 'GET', model: BaseModel = None) -> Any:
         """Generic API call."""
+        model_dump = model.model_dump_json() if model else None
         if method == 'GET':
             response = requests.get(url, headers=self.headers)
         elif method == 'POST':
-            response = requests.post(url, headers=self.headers, json=data)
+            response = requests.post(url, headers=self.headers, data=model_dump)
         else:
             raise ValueError("Unsupported HTTP method - only GET and POST are supported.")
-        
+
         if response.status_code != 200:
             try:
                 resp_json = response.json()
@@ -180,83 +193,3 @@ class PartifulAPI:
         response = self.call_api( url, method='GET')
         
         return response.text
-
-    # def get_event(self, event_id: str) -> Dict[str, Any]:
-    
-    #     """Get event information."""
-    #     url = f'https://partiful.com/e/{event_id}'
-    #     response = requests.get(url)
-    #     soup = BeautifulSoup(response.text, 'html.parser')
-
-    #     name = soup.select_one('h1 span').text if soup.select_one('h1 span') else None
-    #     time_element = soup.find('time')
-    #     date_time = time_element.get('datetime') if time_element else None
-    #     start_datetime = datetime.fromisoformat(date_time).isoformat() if date_time else None
-
-    #     event = {
-    #         'id': event_id,
-    #         'name': name,
-    #         'startDateTime': start_datetime,
-    #         'url': url
-    #     }
-
-    #     return event 
-
-    # def get_users(
-    #     self, 
-    #     ids: List[str], 
-    #     exclude_party_stats: bool = False, 
-    #     include_party_stats: bool = True
-    # ) -> Dict[str, Any]:
-    #     """Get user information for specified user IDs."""
-    #     url = 'https://us-central1-getpartiful.cloudfunctions.net/getUsersV2'
-        
-    #     response = requests.post(
-    #         url,
-    #         headers={
-    #             'Content-Type': 'application/json',
-    #             'authorization': f'Bearer {quote(self.auth_token)}'
-    #         },
-    #         json={
-    #             'data': {
-    #                 'params': {
-    #                     'ids': ids,
-    #                     'includePartyStats': include_party_stats
-    #                 },
-    #               "userId": self.user_id
-    #             }
-    #         }
-    #     )
-        
-    #     return response.json()
-
-    # def get_invitable_contacts(
-    #     self, 
-    #     event_id: str, 
-    #     skip: int = 0, 
-    #     limit: int = 100
-    # ) -> Dict[str, Any]:
-    #     """Get contacts that can be invited to an event."""
-    #     url = 'https://us-central1-getpartiful.cloudfunctions.net/getInvitableContactsV2'
-        
-    #     response = requests.post(
-    #         url,
-    #         headers={
-    #             'Content-Type': 'application/json',
-    #             'authorization': f'Bearer {quote(self.auth_token)}'
-    #         },
-    #         json={
-    #             'data': {
-    #                 'params': {
-    #                     'skip': skip,
-    #                     'limit': limit,
-    #                     'eventId': event_id
-    #                 }
-    #             }
-    #         }
-    #     )
-        
-    #     return response.json()
-
-
-
