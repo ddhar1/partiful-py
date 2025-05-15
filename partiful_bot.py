@@ -2,6 +2,7 @@ from collections import namedtuple
 from datetime import datetime
 import json
 from os import environ
+from Partiful_Types import partiful_profile
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver import Chrome, ChromeOptions
@@ -20,8 +21,6 @@ import random
 
 TWILIO_ACCOUNT_SID = environ['TWILIO_ACCOUNT_SID']
 TWILIO_AUTH_TOKEN = environ['TWILIO_AUTH_TOKEN']
-
-partiful_profile = namedtuple('PartifulProfile', ['name', 'user_id'])
 
 class PartifulBot:
     def __init__(self, phone_number: str, default_profile: partiful_profile):

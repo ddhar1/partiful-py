@@ -2,9 +2,8 @@ import requests
 from datetime import datetime
 import logging
 from typing import List, Dict, Any
-from partiful_bot import PartifulBot, partiful_profile
 import Partiful_Types 
-from Partiful_Types import Event, RequestBody, Data
+from Partiful_Types import Event, RequestBody, Data, partiful_profile
 from zoneinfo import ZoneInfo
 from requests.exceptions import JSONDecodeError
 import json

@@ -2,6 +2,9 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 from typing import Any, List, Union
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from collections import namedtuple
+
+partiful_profile = namedtuple('PartifulProfile', ['name', 'user_id'])
 
 class GuestStatusCounts(BaseModel):
     READY_TO_SEND: int = 0
